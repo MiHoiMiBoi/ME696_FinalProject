@@ -37,8 +37,8 @@ def get_xy(folder, label):
 def classify(method, rs=46):
     # leak_data, leak_features, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak/',label=0)
     # no_leak_data, no_leak_features, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak/',label=1)
-    leak_data, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak2/',label=0)
-    no_leak_data, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak2/',label=1)
+    leak_data, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak/',label=0)
+    no_leak_data, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak/',label=1)
 
     data_list = leak_data + no_leak_data
     label_list = leak_labels + no_leak_labels
@@ -52,6 +52,7 @@ def my_evaluate(truth,y_pred):
     print('Recall:\t\tNo Leak:',round(recall[0]*100,2),'%','\tLeak:',round(recall[1]*100,2),'%')
     f1 = f1_score(truth,y_pred, average=None)
     print('F1:\t\t\tNo Leak:',round(f1[0]*100,2),'%','\tLeak:',round(f1[1]*100,2),'%')
+    return round(accuracy_score(truth,y_pred)*100,2)
 
 def cnn_preprocess(data, labels, padvalue = 0):
     #print([*mylist, *[padvalue]*(N-len(mylist))])
@@ -68,7 +69,7 @@ def cnn_preprocess(data, labels, padvalue = 0):
 
     return N, padded_data, onehot
 
-def cnn(data, labels, rs, epochs = 12, batch_size = 22):    #, rs
+def cnn(data, labels, rs, epochs = 1, batch_size = 24):    #, rs
     np.random.seed(random.randint(0, 400000000))
     tf.random.set_seed(random.randint(0, 400000000))
 
@@ -80,12 +81,10 @@ def cnn(data, labels, rs, epochs = 12, batch_size = 22):    #, rs
     y_train = np.array(y_train)
     y_test = np.array(y_test)
 
-    print(X_train.shape)
-
     model = Sequential([Conv1D(filters = 32, kernel_size = 100, activation = 'relu', input_shape = (N, 1)),
-                        MaxPooling1D(pool_size = 2),
+                        MaxPooling1D(pool_size = 3),
                         Conv1D(filters = 32, kernel_size = 100, activation = 'relu'),
-                        MaxPooling1D(pool_size = 2),
+                        MaxPooling1D(pool_size = 3),
                         Flatten(),
                         Dense(32, activation = 'relu'),
                         Dense(2, activation = 'softmax')])
@@ -93,16 +92,21 @@ def cnn(data, labels, rs, epochs = 12, batch_size = 22):    #, rs
     opt = Adam(learning_rate = 1e-3)
     model.compile(loss = 'categorical_crossentropy', optimizer = opt, metrics = ['accuracy'])
 
-    model.summary()
-    # for i in range(50):
-    model.fit(X_train, y_train, epochs = epochs, batch_size = batch_size)
-    y_pred_prob = model.predict(X_test)
-    y_pred, truth = [], []
-    for prob in y_pred_prob:
-        y_pred.append(np.argmax(prob))
-    for prob in y_test:
-        truth.append(np.argmax(prob))
-    my_evaluate(truth, y_pred)
+    # model.summary()
+    for i in range(24):
+        model.fit(X_train, y_train, epochs = epochs, batch_size = batch_size, verbose=2)
+        y_pred_prob = model.predict(X_test)
+        y_pred, truth = [], []
+        for prob in y_pred_prob:
+            y_pred.append(np.argmax(prob))
+        for prob in y_test:
+            truth.append(np.argmax(prob))
+        print(i)
+        my_evaluate(truth, y_pred)
+    # return my_evaluate(truth, y_pred)
 
 if __name__ == '__main__':
-    classify('cnn')
+    scores = []
+    for i in range(1):
+        scores.append(classify('cnn'))
+    # print(np.mean(np.array(scores)))
