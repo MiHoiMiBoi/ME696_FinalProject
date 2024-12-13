@@ -37,8 +37,8 @@ def get_xy(folder, label):
 def classify(method, rs=46):
     # leak_data, leak_features, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak/',label=0)
     # no_leak_data, no_leak_features, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak/',label=1)
-    leak_data, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak/',label=0)
-    no_leak_data, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak/',label=1)
+    leak_data, leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/Leak2/',label=0)
+    no_leak_data, no_leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/No Leak2/',label=1)
 
     data_list = leak_data + no_leak_data
     label_list = leak_labels + no_leak_labels
@@ -81,6 +81,8 @@ def cnn(data, labels, rs, epochs = 1, batch_size = 24):    #, rs
     y_train = np.array(y_train)
     y_test = np.array(y_test)
 
+    print(len(X_train),' - ',len(X_test),' - ',len(X_train) + len(X_test))
+
     model = Sequential([Conv1D(filters = 32, kernel_size = 100, activation = 'relu', input_shape = (N, 1)),
                         MaxPooling1D(pool_size = 3),
                         Conv1D(filters = 32, kernel_size = 100, activation = 'relu'),
@@ -89,12 +91,12 @@ def cnn(data, labels, rs, epochs = 1, batch_size = 24):    #, rs
                         Dense(32, activation = 'relu'),
                         Dense(2, activation = 'softmax')])
 
-    opt = Adam(learning_rate = 1e-3)
+    opt = Adam(learning_rate = 3e-3)
     model.compile(loss = 'categorical_crossentropy', optimizer = opt, metrics = ['accuracy'])
 
-    # model.summary()
+    model.summary()
     for i in range(24):
-        model.fit(X_train, y_train, epochs = epochs, batch_size = batch_size, verbose=2)
+        model.fit(X_train, y_train, epochs = epochs, batch_size = batch_size, verbose=1)
         y_pred_prob = model.predict(X_test)
         y_pred, truth = [], []
         for prob in y_pred_prob:
