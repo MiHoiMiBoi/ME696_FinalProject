@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import random
 import scipy
+import FeatureExtract
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
@@ -22,13 +23,16 @@ def get_xy(folder, label):
         if filename.endswith('.csv'):
             df = pd.read_csv(folder + filename)
             data = df['data']
-            data_list.append(data)
+            # data_fft = np.fft(data)
+            data_list.append(np.fft.fft(data).tolist())
             labels.append(label)
     return data_list, labels
 
 def classify(method, rs=32, rs2 = 2):
-    leak_data, leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/Leak1/',label=1)
-    no_leak_data, no_leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/No Leak1/',label=0)
+    # leak_data, leak_features, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak/',label=0)
+    # no_leak_data, no_leak_features, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak/',label=1)
+    leak_data, leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/Leak2/',label=1)
+    no_leak_data, no_leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/No Leak2/',label=0)
     leak_data2, leak_labels2 = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/Leak1_2/',label=1)
     no_leak_data2, no_leak_labels2 = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/No Leak1_2/',label=0)
 
@@ -58,17 +62,21 @@ def cnn_preprocess(data, labels, padvalue = 0):
         pad_size = N-len(datapoint)
         padded = [*datapoint, *[padvalue]*pad_size]
         padded_data.append(padded)
-    padded_data = scipy.ndimage.gaussian_filter(padded_data, (1,24))
+    print(np.array(padded_data).shape)
+    # padded_data = scipy.ndimage.gaussian_filter(padded_data, (1,24))
 
     onehot = to_categorical(labels)
+    print(np.array(onehot).shape)
 
     return N, padded_data, onehot
 
-def cnn(data, labels, data2, labels2, rs, rs2, epochs = 1, batch_size = 24):    #, rs
+def cnn(data, labels, data2, labels2, rs, rs2, epochs = 200, batch_size = 24):    #, rs
     rand1 = random.randint(0, 400000000)
     rand2 = random.randint(0, 400000000)
+    rand3 = random.randint(0, 400000000)
     print(rand1)
     print(rand2)
+    print(rand3)
     np.random.seed(rand1)
     tf.random.set_seed(rand2)
     # np.random.seed(rs2)
@@ -76,7 +84,7 @@ def cnn(data, labels, data2, labels2, rs, rs2, epochs = 1, batch_size = 24):    
 
     N, padded_data, onehot = cnn_preprocess(data,labels)
     # N2, padded_data2, onehot2 = cnn_preprocess(data2,labels2)
-    X_train, X_test, y_train, y_test = train_test_split(padded_data, onehot, test_size = 0.3)   #, random_state = rs
+    X_train, X_test, y_train, y_test = train_test_split(padded_data, onehot, test_size = 0.3, random_state = rand3)   #, random_state = rs
 
     X_train = np.array(X_train)
     X_test = np.array(X_test)
@@ -89,24 +97,26 @@ def cnn(data, labels, data2, labels2, rs, rs2, epochs = 1, batch_size = 24):    
 
     print(len(X_train),' - ',len(X_test),' - ',len(X_train) + len(X_test))
 
-    model = Sequential([Conv1D(filters = 32, kernel_size = 100, activation = 'relu', input_shape = (N, 1)),
+    model = Sequential([
+                        Conv1D(filters = 32, kernel_size = 100, activation = 'relu', input_shape = (N, 1)),
                         MaxPooling1D(pool_size = 3),
                         Conv1D(filters = 32, kernel_size = 100, activation = 'relu'),
                         MaxPooling1D(pool_size = 3),
+                        # Dense(24, activation = 'relu',input_shape = (N, 1)),
                         Flatten(),
-                        Dense(32, activation = 'relu'),
+                        Dense(12, activation = 'relu'),
                         Dense(2, activation = 'softmax')])
 
-    opt = Adam(learning_rate = 3e-3)
+    opt = Adam(learning_rate = 1e-3)
     model.compile(loss = 'categorical_crossentropy', optimizer = opt, metrics = ['accuracy'])
 
     model.summary()
-    data3, labels3 = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/j/', label=0)
-    N2, padded_data2, onehot2 = cnn_preprocess(data3, labels3)
-    new_data = np.array(padded_data2)
-    new_answers = np.array(labels3)
-    for i in range(24):
-        model.fit(X_train, y_train, epochs = epochs, batch_size = batch_size, verbose=1)
+    # data3, labels3 = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/k/', label=0)
+    # N2, padded_data2, onehot2 = cnn_preprocess(data3, labels3)
+    # new_data = np.array(padded_data2)
+    # new_answers = np.array(labels3)
+    for i in range(epochs):
+        model.fit(X_train, y_train, epochs = 1, batch_size = batch_size, verbose=1)
         print(X_test.shape)
         y_pred_prob = model.predict(X_test)
         y_pred, truth = [], []
@@ -118,13 +128,13 @@ def cnn(data, labels, data2, labels2, rs, rs2, epochs = 1, batch_size = 24):    
         my_evaluate(truth, y_pred)
 
         # print(new_data.shape)
-        pred = model.predict(new_data)
-        y_pred, truth = [], []
-        for prob in pred:
-            y_pred.append(np.argmax(prob))
-        for prob in new_answers:
-            truth.append(np.argmax(prob))
-        my_evaluate(truth, y_pred)
+        # pred = model.predict(new_data)
+        # y_pred, truth = [], []
+        # for prob in pred:
+        #     y_pred.append(np.argmax(prob))
+        # for prob in new_answers:
+        #     truth.append(np.argmax(prob))
+        # my_evaluate(truth, y_pred)
     # return my_evaluate(truth, y_pred)
 
 if __name__ == '__main__':

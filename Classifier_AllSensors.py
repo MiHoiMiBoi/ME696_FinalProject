@@ -38,10 +38,10 @@ def get_xy(folder, label):
 def classify(method, rs=35):
     # leak_data, leak_features, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak/',label=0)
     # no_leak_data, no_leak_features, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak/',label=1)
-    leak_data, leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak4/',label=0)
-    no_leak_data, no_leak_labels = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak4/',label=1)
-    leak_data2, leak_labels2 = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/Leak1_2/',label=0)
-    no_leak_data2, no_leak_labels2 = get_xy(folder='C:/Users/Eric/Desktop/ME696_FinalProject/data/No Leak1_2/',label=1)
+    leak_data, leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/Leak4/',label=0)
+    no_leak_data, no_leak_labels = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/No Leak4/',label=1)
+    leak_data2, leak_labels2 = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/Leak1_2/',label=0)
+    no_leak_data2, no_leak_labels2 = get_xy(folder='D:/Eric/Documents/ME696_FinalProject/data/No Leak1_2/',label=1)
 
     data_list = leak_data + no_leak_data
     label_list = leak_labels + no_leak_labels
@@ -63,13 +63,16 @@ def cnn_preprocess(data, labels, padvalue = 0):
     #print([*mylist, *[padvalue]*(N-len(mylist))])
     N = max([len(datapoint) for datapoint in data])
     print('N = ',N)
-
-    padded_data = []
-    for datapoint in data:
-        pad_size = N-len(datapoint)
-        padded = [*datapoint, *[padvalue]*pad_size]
-        padded_data.append(padded)
-    padded_data = scipy.ndimage.gaussian_filter(padded_data, 6)
+    # q = np.array(data[0])
+    # print(q.shape[1])
+    q = np.full((len(data),N,3),0,dtype=float)
+    # padded_data = []
+    for i, datapoint in enumerate(data):
+        # pad_size = N-len(datapoint)
+        # padded = [*datapoint, *[padvalue]*pad_size]
+        # padded_data.append
+        q[i,0:len(datapoint),:] = np.array(datapoint)
+    padded_data = scipy.ndimage.gaussian_filter(q, (1,6,1))
 
     onehot = to_categorical(labels)
 
@@ -81,7 +84,7 @@ def cnn(data, labels, data2, labels2, rs, epochs = 1, batch_size = 24):    #, rs
 
     N, padded_data, onehot = cnn_preprocess(data,labels)
     # N2, padded_data2, onehot2 = cnn_preprocess(data2,labels2)
-    X_train, X_test, y_train, y_test = train_test_split(padded_data, onehot, test_size = 0.3, random_state = rs)   #, random_state = rs
+    X_train, X_test, y_train, y_test = train_test_split(padded_data, onehot, test_size = 0.3)   #, random_state = rs
 
     X_train = np.array(X_train)
     X_test = np.array(X_test)
@@ -95,15 +98,17 @@ def cnn(data, labels, data2, labels2, rs, epochs = 1, batch_size = 24):    #, rs
     print(len(X_train),' - ',len(X_test),' - ',len(X_train) + len(X_test))
     print(X_train.shape)
 
-    model = Sequential([Conv2D(filters = 32, kernel_size = 75, activation = 'relu', input_shape = (N, 1)),
-                        MaxPooling2D(pool_size = 4),
-                        Conv2D(filters = 32, kernel_size = 75, activation = 'relu'),
-                        MaxPooling2D(pool_size = 4),
+    model = Sequential([Conv2D(filters = 32, kernel_size = (100,1), activation = 'relu', input_shape = (N, 3,1)),
+                        MaxPooling2D(pool_size = (4,1)),
+                        Conv2D(filters = 32, kernel_size = (100,1), activation = 'relu'),
+                        MaxPooling2D(pool_size = (4,1)),
+                        # Conv2D(filters = 32, kernel_size = (75,3), activation = 'relu'),
+                        # MaxPooling2D(pool_size = (3,1)),
                         Flatten(),
                         Dense(32, activation = 'relu'),
                         Dense(2, activation = 'softmax')])
 
-    opt = Adam(learning_rate = .5e-3)
+    opt = Adam(learning_rate = 3e-3)
     model.compile(loss = 'categorical_crossentropy', optimizer = opt, metrics = ['accuracy'])
 
     model.summary()
